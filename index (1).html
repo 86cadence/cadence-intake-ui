@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadence — Discovery Call</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0b0b0d;
+      --text-primary: #e8e8ed;
+      --text-secondary: #6e6e80;
+      --accent: #6366f1;
+      --accent-green: #10b981;
+    }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+      background: var(--bg);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 52px;
+      padding: 40px;
+    }
+    .screen.active { display: flex; }
+
+    /* ── Brand ── */
+    .brand {
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    /* ── Orb ── */
+    .orb-scene {
+      position: relative;
+      width: 280px;
+      height: 280px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid rgba(99,102,241,0.07);
+      animation: ring-breathe 4s ease-in-out infinite;
+    }
+    .ring-1 { width: 200px; height: 200px; }
+    .ring-2 { width: 240px; height: 240px; animation-delay: 0.6s; }
+    .ring-3 { width: 280px; height: 280px; animation-delay: 1.2s; }
+
+    @keyframes ring-breathe {
+      0%,100% { opacity: 0.35; }
+      50%      { opacity: 0.9; }
+    }
+
+    .orb {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 38% 38%, #4f46e5, #1e1b4b 55%, #0b0b0d);
+      box-shadow:
+        0 0 40px rgba(99,102,241,0.18),
+        0 0 90px rgba(99,102,241,0.08),
+        inset 0 1px 0 rgba(255,255,255,0.07);
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.4s ease;
+      animation: orb-idle 3.5s ease-in-out infinite;
+      will-change: transform;
+    }
+
+    @keyframes orb-idle {
+      0%,100% { transform: scale(1); }
+      50%      { transform: scale(1.04); }
+    }
+
+    .orb.speaking {
+      animation: none;
+      background: radial-gradient(circle at 38% 38%, #818cf8, #312e81 55%, #1e1b4b);
+    }
+
+    .orb.thinking {
+      animation: orb-think 1.8s ease-in-out infinite;
+      background: radial-gradient(circle at 38% 38%, #34d399, #065f46 55%, #0b0b0d);
+    }
+
+    @keyframes orb-think {
+      0%,100% { transform: scale(1);    opacity: 0.75; }
+      50%      { transform: scale(1.05); opacity: 1; }
+    }
+
+    .orb.connecting {
+      animation: orb-connect 2s ease-in-out infinite;
+    }
+
+    @keyframes orb-connect {
+      0%,100% { opacity: 0.25; }
+      50%      { opacity: 0.55; }
+    }
+
+    /* ── Status ── */
+    .status-wrap { text-align: center; }
+
+    .status-label {
+      font-size: 15px;
+      color: var(--text-secondary);
+      letter-spacing: 0.01em;
+      min-height: 22px;
+      transition: opacity 0.3s ease;
+    }
+
+    /* ── Mic bars ── */
+    .mic-bars {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 3px;
+      height: 18px;
+      margin-top: 14px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .mic-bars.active { opacity: 1; }
+
+    .mic-bar {
+      width: 3px;
+      min-height: 3px;
+      border-radius: 2px;
+      background: var(--accent-green);
+      transition: height 0.07s ease;
+    }
+
+    /* ── End button ── */
+    .end-btn {
+      padding: 13px 44px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 100px;
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-family: inherit;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .end-btn:hover {
+      border-color: rgba(255,255,255,0.22);
+      color: var(--text-primary);
+      background: rgba(255,255,255,0.04);
+    }
+
+    /* ── Ended screen ── */
+    .ended-title {
+      font-size: 22px;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+    }
+    .ended-sub {
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Call UI -->
+  <div class="screen active" id="call-screen">
+    <span class="brand">Cadence</span>
+
+    <div class="orb-scene">
+      <div class="ring ring-3"></div>
+      <div class="ring ring-2"></div>
+      <div class="ring ring-1"></div>
+      <div class="orb connecting" id="orb"></div>
+    </div>
+
+    <div class="status-wrap">
+      <div class="status-label" id="status-label">Connecting…</div>
+      <div class="mic-bars" id="mic-bars">
+        <div class="mic-bar" id="b1"></div>
+        <div class="mic-bar" id="b2"></div>
+        <div class="mic-bar" id="b3"></div>
+        <div class="mic-bar" id="b4"></div>
+        <div class="mic-bar" id="b5"></div>
+      </div>
+    </div>
+
+    <button class="end-btn" onclick="endCall()">End call</button>
+  </div>
+
+  <!-- Ended UI -->
+  <div class="screen" id="ended-screen">
+    <span class="brand">Cadence</span>
+    <div class="ended-title">That's a wrap.</div>
+    <div class="ended-sub">Thank you for your time.<br>You'll hear from us soon.</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
+  <script>
+    const params      = new URLSearchParams(window.location.search);
+    const livekitUrl  = params.get('liveKitUrl');
+    const token       = params.get('token');
+
+    const orb         = document.getElementById('orb');
+    const statusLabel = document.getElementById('status-label');
+    const micBars     = document.getElementById('mic-bars');
+    const bars        = [1,2,3,4,5].map(i => document.getElementById('b' + i));
+
+    let room, animFrame;
+    let agentAnalyser, localAnalyser;
+    let agentWasSpeaking = false;
+    let thinkTimer;
+
+    function setOrbState(state, label) {
+      orb.className = 'orb ' + state;
+      statusLabel.textContent = label;
+    }
+
+    function setOrbLevel(level) {
+      const g = Math.min(level * 2.5, 1);
+      const s = 1 + g * 0.2;
+      orb.style.transform = 'scale(' + s + ')';
+      orb.style.boxShadow = [
+        '0 0 ' + (40 + g * 70) + 'px rgba(99,102,241,' + (0.18 + g * 0.55) + ')',
+        '0 0 ' + (90 + g * 80) + 'px rgba(99,102,241,' + (0.08 + g * 0.18) + ')',
+        'inset 0 1px 0 rgba(255,255,255,0.07)'
+      ].join(',');
+    }
+
+    function getLevel(analyser) {
+      if (!analyser) return 0;
+      const buf = new Uint8Array(analyser.frequencyBinCount);
+      analyser.getByteFrequencyData(buf);
+      return buf.reduce((a,b) => a + b, 0) / buf.length / 255;
+    }
+
+    function attachAnalyser(mediaEl) {
+      const ctx = new AudioContext();
+      const src = ctx.createMediaElementSource(mediaEl);
+      const an  = ctx.createAnalyser();
+      an.fftSize = 256;
+      src.connect(an);
+      an.connect(ctx.destination);
+      return an;
+    }
+
+    function attachLocalAnalyser(track) {
+      const ctx = new AudioContext();
+      const ms  = new MediaStream([track.mediaStreamTrack]);
+      const src = ctx.createMediaStreamSource(ms);
+      const an  = ctx.createAnalyser();
+      an.fftSize = 256;
+      src.connect(an);
+      return an;
+    }
+
+    function loop() {
+      const agentLvl = getLevel(agentAnalyser);
+      const localLvl = getLevel(localAnalyser);
+      const agentOn  = agentLvl > 0.015;
+      const localOn  = localLvl > 0.02;
+
+      if (agentOn) {
+        clearTimeout(thinkTimer);
+        if (!agentWasSpeaking) { agentWasSpeaking = true; setOrbState('speaking', 'Speaking'); }
+        setOrbLevel(agentLvl);
+      } else if (agentWasSpeaking) {
+        agentWasSpeaking = false;
+        orb.style.transform = '';
+        orb.style.boxShadow = '';
+        setOrbState('thinking', 'Processing…');
+        thinkTimer = setTimeout(() => setOrbState('', 'Listening…'), 2500);
+      }
+
+      if (localOn) {
+        micBars.classList.add('active');
+        bars.forEach(b => { b.style.height = (Math.random() * localLvl * 16 + 3) + 'px'; });
+      } else {
+        micBars.classList.remove('active');
+        bars.forEach(b => { b.style.height = '3px'; });
+      }
+
+      animFrame = requestAnimationFrame(loop);
+    }
+
+    async function connect() {
+      if (!livekitUrl || !token) {
+        setOrbState('connecting', 'Invalid link — please use the URL from your email.');
+        return;
+      }
+
+      room = new LivekitClient.Room({
+        audioCaptureDefaults: { echoCancellation: true, noiseSuppression: true },
+      });
+
+      room.on(LivekitClient.RoomEvent.Connected, () => {
+        setOrbState('', 'Listening…');
+        loop();
+      });
+
+      room.on(LivekitClient.RoomEvent.Disconnected, showEnded);
+
+      room.on(LivekitClient.RoomEvent.TrackSubscribed, (track) => {
+        if (track.kind !== LivekitClient.Track.Kind.Audio) return;
+        const el = track.attach();
+        el.style.display = 'none';
+        document.body.appendChild(el);
+        agentAnalyser = attachAnalyser(el);
+      });
+
+      room.on(LivekitClient.RoomEvent.LocalTrackPublished, (pub) => {
+        if (pub.track && pub.track.kind === LivekitClient.Track.Kind.Audio) {
+          localAnalyser = attachLocalAnalyser(pub.track);
+        }
+      });
+
+      try {
+        await room.connect(livekitUrl, token);
+        await room.localParticipant.setMicrophoneEnabled(true);
+        await room.localParticipant.setCameraEnabled(false);
+      } catch (e) {
+        setOrbState('connecting', 'Connection failed. Please try again.');
+        console.error(e);
+      }
+    }
+
+    function showEnded() {
+      cancelAnimationFrame(animFrame);
+      document.getElementById('call-screen').classList.remove('active');
+      document.getElementById('ended-screen').classList.add('active');
+    }
+
+    async function endCall() {
+      if (room) await room.disconnect();
+      else showEnded();
+    }
+
+    connect();
+  </script>
+</body>
+</html>
